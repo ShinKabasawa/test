@@ -68,11 +68,13 @@ namespace sweating_ManagementSystem
         private int count = 0;
         private Form2 form2;
         private Form1 form1;
+        private NEWS_form news_form;
         private readonly string csvpath = "C:\\SweatingApp";
-        private Thread serial_check;
+        public Thread serial_check;
         private ServerURL_input serverUrl_input;
         private NotifyIcon notifyicon;
-        private System.Windows.Forms.Timer timer;
+        private System.Windows.Forms.Timer SerialCheck_timer;
+        private System.Windows.Forms.Timer SendDevData_Timer;
         private string URL;
 
         public Resident()
@@ -231,14 +233,21 @@ namespace sweating_ManagementSystem
 
 
             //USBシリアル変換器の変化を監視
-            serial_check = new Thread(SerialCheck);
-            serial_check.Start();
+            //serial_check = new Thread(SerialCheck);
+            //serial_check.Start();
 
             //アプリ起動時にタイマーセット
-            timer = new System.Windows.Forms.Timer();
-            timer.Tick += new EventHandler(Periodic_execution);
-            timer.Interval = 1000;
-            timer.Enabled = true;
+            SerialCheck_timer = new System.Windows.Forms.Timer();
+            SerialCheck_timer.Tick += new EventHandler(SerialCheck);
+            SerialCheck_timer.Interval = 500;
+            SerialCheck_timer.Enabled = true;
+
+
+            //1秒周期で機器から取得したデータをサーバーへ送信
+            SendDevData_Timer = new System.Windows.Forms.Timer();
+            SendDevData_Timer.Tick += new EventHandler(Periodic_execution);
+            SendDevData_Timer.Interval = 1000;
+            SendDevData_Timer.Enabled = true;
         }
 
         /// <summary>
@@ -261,7 +270,7 @@ namespace sweating_ManagementSystem
         /// USBシリアル変換器接続時：シリアル接続を行う
         /// USBシリアル変換器抜かれた時：シリアル接続を切断する
         /// </summary>
-        private void SerialCheck()
+        private void SerialCheck(object sender,EventArgs e)
         {
 
             string[] name = GetDeviceNames();
@@ -272,11 +281,11 @@ namespace sweating_ManagementSystem
             }
              
             int CountDeviceBefour = CountDevice;
-            bool serial_check = false;
+            bool serial_flg = false;
             string port_name = null;
 
-            while (true)
-            {
+            //while (true)
+            //{
 
                 name = GetDeviceNames();
 
@@ -288,12 +297,12 @@ namespace sweating_ManagementSystem
                 else
                 {
                     CountDevice = 0;
-                    serial_check = false;
+                    serial_flg = false;
                 }
                 
                 
-                if (CountDevice != CountDeviceBefour)
-                {
+                //if (CountDevice != CountDeviceBefour)
+                //{
 
                     for (int i = 0; i < CountDevice; i++)
                     {
@@ -301,50 +310,68 @@ namespace sweating_ManagementSystem
                         {
                             //接続機器名が「USB Serial Port」のCOMポートの数値を取得
                             port_name = name[i].Substring(17).Replace(")", "");
-                            serial_check = true;
+                            serial_flg = true;
                             break;
                         }
                         else
                         {
-                            serial_check = false;
+                            serial_flg = false;
                         }
                     }
 
-                    if (serial_check)
+                    if (serial_flg)
                     {
-                        serialport.PortName = port_name;
-                        serialport.Open();
-                        MessageBox.Show("接続された");
+                        if (!serialport.IsOpen)
+                        {
+                            try
+                            {                                
+                                serialport.PortName = port_name;
+                                serialport.Open();
+                                MessageBox.Show("接続された");
+   
+                            }
+                            catch (Exception)
+                            {
+                                serial_flg = false;        
+                                throw;
+                            }
+                        }
                     }
                     else
                     {
-                        serialport.Close();
-                        DialogResult dr = MessageBox.Show("クレードルとの通信が切断されました。\nクレードル内に未送信データが存在する可能性があります。\n今すぐ未転送データを受信しますか", "確認", MessageBoxButtons.YesNo);
+                        //serialport.Close();
+                        DialogResult dr = new DialogResult();
 
+                        if (dr == null)
+                        {
+                         
+                            dr = MessageBox.Show("クレードルとの通信が切断されました。\nクレードル内に未送信データが存在する可能性があります。\n今すぐ未転送データを受信しますか", "確認", MessageBoxButtons.YesNo);
+   
+                        }
                         if (dr == System.Windows.Forms.DialogResult.Yes)
                         {
                             MessageBox.Show("Yesがクリックされました");
                         }
                         else
                         {
-
-                            //notifyicon = new NotifyIcon();
-
-                            //notifyicon.BalloonTipIcon = ToolTipIcon.Warning;
-
-                            //notifyicon.Text = "確認テスト";
-                            //notifyicon.Visible = true;
-                            //notifyicon.BalloonTipTitle = "常駐アプリバルーン";
-                            //notifyicon.BalloonTipText = "クレードルとの通信が切断されました。";
-                            //notifyicon.ShowBalloonTip(5000);    
+                            SerialCheck_timer.Stop();
+                            if (news_form == null)
+                            {
+                             
+                                news_form = new NEWS_form();
+                                news_form.ShowVersionUp("常駐アプリ", "クレードル内に未送信データが存在する可能性があります。\n必ずクレードル内の未転送データを受信してください", 100000);   
+   
+                            }
+                            //break;
 
                         }   
 
                     }
-                }
+                //}
 
-                CountDeviceBefour = CountDevice;
-            }
+                //CountDeviceBefour = CountDevice;
+            //}
+            //news_form.ShowVersionUp("常駐アプリ", "クレードル内に未送信データが存在する可能性があります。\n必ずクレードル内の未転送データを受信してください", 30000);   
         }
 
         /// <summary>
@@ -528,7 +555,7 @@ namespace sweating_ManagementSystem
             }
 
             //タイマー停止
-            timer.Stop();
+            SerialCheck_timer.Stop();
 
             //データ送信スレッド中止
             if (thread != null)
