@@ -1,0 +1,11 @@
+C:\Users\s-kabasawa\workspace\sweating_ManagementSystem\sweating_ManagementSystem\bin\Debug\sweating_ManagementSystem.exe.config
+C:\Users\s-kabasawa\workspace\sweating_ManagementSystem\sweating_ManagementSystem\bin\Debug\sweating_ManagementSystem.exe
+C:\Users\s-kabasawa\workspace\sweating_ManagementSystem\sweating_ManagementSystem\bin\Debug\sweating_ManagementSystem.pdb
+C:\Users\s-kabasawa\workspace\sweating_ManagementSystem\sweating_ManagementSystem\obj\Debug\sweating_ManagementSystem.csprojResolveAssemblyReference.cache
+C:\Users\s-kabasawa\workspace\sweating_ManagementSystem\sweating_ManagementSystem\obj\Debug\sweating_ManagementSystem.Form1.resources
+C:\Users\s-kabasawa\workspace\sweating_ManagementSystem\sweating_ManagementSystem\obj\Debug\sweating_ManagementSystem.Properties.Resources.resources
+C:\Users\s-kabasawa\workspace\sweating_ManagementSystem\sweating_ManagementSystem\obj\Debug\sweating_ManagementSystem.csproj.GenerateResource.Cache
+C:\Users\s-kabasawa\workspace\sweating_ManagementSystem\sweating_ManagementSystem\obj\Debug\sweating_ManagementSystem.exe
+C:\Users\s-kabasawa\workspace\sweating_ManagementSystem\sweating_ManagementSystem\obj\Debug\sweating_ManagementSystem.pdb
+C:\Users\s-kabasawa\workspace\sweating_ManagementSystem\sweating_ManagementSystem\obj\Debug\sweating_ManagementSystem.Form2.resources
+C:\Users\s-kabasawa\workspace\sweating_ManagementSystem\sweating_ManagementSystem\obj\Debug\sweating_ManagementSystem.ServerURL_input.resources
