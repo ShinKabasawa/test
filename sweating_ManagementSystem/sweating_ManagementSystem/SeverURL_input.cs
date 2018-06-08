@@ -61,7 +61,6 @@ namespace sweating_ManagementSystem
 
             this.Close();
 
-            
         }
 
         /// <summary>
