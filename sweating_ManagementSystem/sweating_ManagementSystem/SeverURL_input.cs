@@ -44,6 +44,19 @@ namespace sweating_ManagementSystem
 
         }
 
+        protected override System.Windows.Forms.CreateParams CreateParams
+        {
+            get
+            {
+                const int CS_NOCLOSE = 0x200;
+
+                System.Windows.Forms.CreateParams createParams = base.CreateParams;
+                createParams.ClassStyle |= CS_NOCLOSE;
+
+                return createParams;
+            }
+        }
+
         /// <summary>
         /// 登録ボタンクリック時の処理
         /// </summary>

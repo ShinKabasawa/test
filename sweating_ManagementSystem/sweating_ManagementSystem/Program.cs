@@ -1,12 +1,15 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Data;
 using System.Drawing;
 using System.IO;
 using System.IO.Ports;
 using System.Management;
 using System.Net;
+using System.Net.Http;
 using System.Threading;
 using System.Windows.Forms;
+
 
 namespace sweating_ManagementSystem
 {
@@ -66,8 +69,6 @@ namespace sweating_ManagementSystem
         private Thread thread;          //WebAPI通信用スレッド
         public  SerialPort serialport;  //シリアルポート
         private int count = 0;
-        private Form2 form2;
-        private Form1 form1;
         private NEWS_form news_form;
         private readonly string csvpath = "C:\\SweatingApp";
         public Thread serial_check;
@@ -76,14 +77,14 @@ namespace sweating_ManagementSystem
         private System.Windows.Forms.Timer SerialCheck_timer;
         private System.Windows.Forms.Timer SendDevData_Timer;
         private string URL;
+        private System.Windows.Forms.Timer timer;
+
 
         public Resident()
         {
             this.ShowInTaskbar = false;
             this.setCompornent();
 
-            form1 = null;
-            form2 = null;
             serverUrl_input = null;
 
 
@@ -103,74 +104,13 @@ namespace sweating_ManagementSystem
 
 
             //接続確認
-
+            //using (var client = new HttpClient())
+            //{
+            //    var response = client.GetAsync("http://crispy.stars.ne.jp/receive.php").Result;
+            //}
 
 
             connect();
-
-            //COMポートを検索
-            //string[] ports = SerialPort.GetPortNames();
-
-            //string[] DevName = GetDeviceNames();
-
-            //serialport = new SerialPort();
-
-
-            //int size = 0;
-
-            ////nullチェック
-            //if (DevName != null)
-            //{
-            //    size = DevName.Length;   
-            //}
-
-            //for (int i = 0; i < size; i++)
-            //{
-            //    if (DevName[i].Substring(0, 15).Equals("USB Serial Port"))
-            //    {
-            //        //接続機器名が「USB Serial Port」のCOMポートの数値を取得
-            //        serialport.PortName = DevName[i].Substring(17).Replace(")", "");
-            //        break;
-            //    }
-            //}
-
-
-            ////検索したCOMポートでシリアル接続
-            //try
-            //{
-            //    //USBシリアル変換器を検索した結果のCOMポート名を
-            //    //使用しシリアル接続を行う
-            //    serialport.BaudRate = 9600;
-            //    serialport.Parity = Parity.None;
-            //    serialport.DataBits = 8;
-            //    serialport.StopBits = StopBits.One;
-            //    serialport.Encoding = System.Text.Encoding.GetEncoding("UTF-8");
-            //    serialport.DataReceived += new System.IO.Ports.SerialDataReceivedEventHandler(serialPort1_DataReceived);
-            //    serialport.Handshake = Handshake.None;
-            //    serialport.Open();
-            //}
-            //catch (Exception e)
-            //{
-
-            //}
-
-            ////シリアル接続確認
-            //if (!serialport.IsOpen)
-            //{
-            //    MessageBox.Show("シリアル接続出来ませんでした。");
-            //}
-
-
-            ////USBシリアル変換器の変化を監視
-            //serial_check = new Thread(SerialCheck);
-            //serial_check.Start();
-
-            ////アプリ起動時にタイマーセット
-            //timer = new System.Windows.Forms.Timer();
-            //timer.Tick += new EventHandler(Periodic_execution);
-            //timer.Interval = 1000;
-            //timer.Enabled = true;
-            
 
         }
 
@@ -284,94 +224,75 @@ namespace sweating_ManagementSystem
             bool serial_flg = false;
             string port_name = null;
 
-            //while (true)
-            //{
-
-                name = GetDeviceNames();
-
-                //nullチェック
-                if (name != null)
+            name = GetDeviceNames();
+            
+            //nullチェック
+            if (name != null)
+            {
+                CountDevice = name.Length;
+            }
+            else
+            {
+                CountDevice = 0;
+                serial_flg = false;
+            }
+            
+            for (int i = 0; i < CountDevice; i++)
+            {
+                if (name[i].Substring(0, 15).Equals("USB Serial Port"))
                 {
-                    CountDevice = name.Length;
+                    //接続機器名が「USB Serial Port」のCOMポートの数値を取得
+                    port_name = name[i].Substring(17).Replace(")", "");
+                    serial_flg = true;
+                    break;
                 }
                 else
                 {
-                    CountDevice = 0;
                     serial_flg = false;
                 }
-                
-                
-                //if (CountDevice != CountDeviceBefour)
-                //{
-
-                    for (int i = 0; i < CountDevice; i++)
+            }
+            
+            if (serial_flg)
+            {
+                if (!serialport.IsOpen)
+                {
+                    try
                     {
-                        if (name[i].Substring(0, 15).Equals("USB Serial Port"))
-                        {
-                            //接続機器名が「USB Serial Port」のCOMポートの数値を取得
-                            port_name = name[i].Substring(17).Replace(")", "");
-                            serial_flg = true;
-                            break;
-                        }
-                        else
-                        {
-                            serial_flg = false;
-                        }
+                        serialport.PortName = port_name;
+                        serialport.Open();
+                        MessageBox.Show("接続された");
                     }
-
-                    if (serial_flg)
+                    catch (Exception)
                     {
-                        if (!serialport.IsOpen)
-                        {
-                            try
-                            {                                
-                                serialport.PortName = port_name;
-                                serialport.Open();
-                                MessageBox.Show("接続された");
-   
-                            }
-                            catch (Exception)
-                            {
-                                serial_flg = false;        
-                                throw;
-                            }
-                        }
+                        serial_flg = false;
+                        throw;
                     }
-                    else
+                }
+            }
+            else
+            {
+                //serialport.Close();
+                DialogResult dr = new DialogResult();
+                if (dr == null)
+                {
+                    dr = MessageBox.Show("クレードルとの通信が切断されました。\nクレードル内に未送信データが存在する可能性があります。\n今すぐ未転送データを受信しますか", "確認", MessageBoxButtons.YesNo);
+                }
+
+                if (dr == System.Windows.Forms.DialogResult.Yes)
+                {
+                    MessageBox.Show("Yesがクリックされました");
+                }
+                else
+                {
+                    SerialCheck_timer.Stop();
+                    
+                    if (news_form == null)
                     {
-                        //serialport.Close();
-                        DialogResult dr = new DialogResult();
-
-                        if (dr == null)
-                        {
-                         
-                            dr = MessageBox.Show("クレードルとの通信が切断されました。\nクレードル内に未送信データが存在する可能性があります。\n今すぐ未転送データを受信しますか", "確認", MessageBoxButtons.YesNo);
-   
-                        }
-                        if (dr == System.Windows.Forms.DialogResult.Yes)
-                        {
-                            MessageBox.Show("Yesがクリックされました");
-                        }
-                        else
-                        {
-                            SerialCheck_timer.Stop();
-                            if (news_form == null)
-                            {
-                             
-                                news_form = new NEWS_form();
-                                news_form.ShowVersionUp("常駐アプリ", "クレードル内に未送信データが存在する可能性があります。\n必ずクレードル内の未転送データを受信してください", 100000);   
-   
-                            }
-                            //break;
-
-                        }   
-
+                        news_form = new NEWS_form();
+                        news_form.ShowNewsBalloon("常駐アプリ", "クレードル内に未送信データが存在する可能性があります。\n必ずクレードル内の未転送データを受信してください", 100000);
                     }
-                //}
-
-                //CountDeviceBefour = CountDevice;
-            //}
-            //news_form.ShowVersionUp("常駐アプリ", "クレードル内に未送信データが存在する可能性があります。\n必ずクレードル内の未転送データを受信してください", 30000);   
+                }
+            }
         }
 
         /// <summary>
@@ -392,67 +313,48 @@ namespace sweating_ManagementSystem
 
                 Response_(str);
 
-                //Byte[] bytes = System.Text.Encoding.ASCII.GetBytes(serialport.ReadExisting());
-
-                //Response_(str);
-
-                //for (int i = 0; i < bytes.Length; i++)
-                //{
-                //    str += Convert.ToString(bytes[i], 16);
-                //}
                 //ディレクトリが存在するか確認
                 //DirectoryUtils.SafeCreateDirectory(csvpath);
 
-                //受信したデータをテキストファイルに出力
-                string txtpath = "C:\\SweatingApp\\serialData" + count + ".txt";
-                using (System.IO.StreamWriter file = new System.IO.StreamWriter(txtpath, false,
-                      System.Text.Encoding.GetEncoding("UTF-8")))
-                {
-                    file.Write(str);
-                }
 
                 //取得したデータを出力するパス
+                //ファイル名：クライアントID_セットID_機器ID_日付.csv
                 String csvpath_new = csvpath + "\\DevData" + count + ".csv";
 
-                //DataTable dt = new DataTable("DevDataTable");
-                //DataRow dRow = dt.NewRow();
-                //dt.Columns.Add("SetId", Type.GetType("System.Int32"));          //セットID
-                //dt.Columns.Add("DevNo", Type.GetType("System.Int32"));          //機器No
-                //dt.Columns.Add("No", Type.GetType("System.Int32"));             //連番
-                //dt.Columns.Add("RR_interval", Type.GetType("System.Int32"));    //RR間隔
-                //dt.Columns.Add("AccX", Type.GetType("System.Int32"));           //加速度X
-                //dt.Columns.Add("AccY", Type.GetType("System.Int32"));           //加速度Y
-                //dt.Columns.Add("AccZ", Type.GetType("System.Int32"));           //加速度Z
-                //dt.Columns.Add("Sweating", Type.GetType("System.Int32"));       //発汗
-                //dt.Columns.Add("Temperature", Type.GetType("System.Int32"));    //温度
-                //dt.Columns.Add("Humidity", Type.GetType("System.Int32"));       //湿度
-                //dt.Columns.Add("Reserve1", Type.GetType("System.Int32"));
+                DataTable dt = new DataTable("DevDataTable");
+                DataRow dRow = dt.NewRow();
+                dt.Columns.Add("SetId", Type.GetType("System.Int32"));          //セットID
+                dt.Columns.Add("DevNo", Type.GetType("System.Int32"));          //機器No
+                dt.Columns.Add("No", Type.GetType("System.Int32"));             //連番
+                dt.Columns.Add("RR_interval", Type.GetType("System.Int32"));    //RR間隔
+                dt.Columns.Add("AccX", Type.GetType("System.Int32"));           //加速度X
+                dt.Columns.Add("AccY", Type.GetType("System.Int32"));           //加速度Y
+                dt.Columns.Add("AccZ", Type.GetType("System.Int32"));           //加速度Z
+                dt.Columns.Add("Sweating", Type.GetType("System.Int32"));       //発汗
+                dt.Columns.Add("Temperature", Type.GetType("System.Int32"));    //温度
+                dt.Columns.Add("Humidity", Type.GetType("System.Int32"));       //湿度
+                dt.Columns.Add("resend_flg", Type.GetType("System.Int32"));     //再送フラグ　デフォルト：0
+                dt.Columns.Add("Reserve1", Type.GetType("System.Int32"));
 
-                //for (int i = 0; i < 40; i++)
-                //{
-                //dt.Rows.Clear();
-                //5秒分取得し、DatTableに格納
-                //    for (int j = 0; j < 5; j++)
-                //    {
-                //        dRow = dt.NewRow();
-                //        dRow["SetId"] = 1;              //セットID
-                //        dRow["DevNo"] = 1001;           //機器No
-                //        dRow["No"] = 1;                 //連番
-                //        dRow["RR_interval"] = 120;      //RR間隔
-                //        dRow["AccX"] = 120.5;           //加速度X
-                //        dRow["AccY"] = 20.2;            //加速度Y
-                //        dRow["AccZ"] = 24.3;            //加速Z
-                //        dRow["Sweating"] = 28;          //発汗
-                //        dRow["Temperature"] = 25.6;     //温度
-                //        dRow["Humidity"] = 35;          //湿度
-                //        dRow["Reserve1"] = 100;         //予備1～23
-                //    }
+                dRow = dt.NewRow();
+                dRow["SetId"] = 1;              //セットID
+                dRow["DevNo"] = 101;            //機器No
+                dRow["No"] = 1;                 //連番
+                dRow["RR_interval"] = 120;      //RR間隔
+                dRow["AccX"] = 12;              //加速度X
+                dRow["AccY"] = 20;              //加速度Y
+                dRow["AccZ"] = 24;              //加速Z
+                dRow["Sweating"] = 28;          //発汗
+                dRow["Temperature"] = 25;       //温度
+                dRow["Humidity"] = 35;          //湿度
+                dRow["resend_flg"] = 0;         //再送フラグ デフォルト：0
+                dRow["Reserve1"] = 100;         //予備1～23
+                
                 //DatTableに追加
-                //    dt.ImportRow(dRow);
-                //}
+                dt.Rows.Add(dRow);
 
                 //取得したデータをCSVに出力
-                //CsvOutput.ConvertDataTableToCsv(dt, csvpath_new, true);
+                CsvOutput.ConvertDataTableToCsv(dt, csvpath_new, true);
 
             }
             else
@@ -462,15 +364,11 @@ namespace sweating_ManagementSystem
             }
 
             //送信済みのCSVファイルを削除
-            //for (int i = 1; i <= 5; i++)
-            //{
-            //    //CSVファイル削除
-            //    System.IO.File.Delete(csvpath + "\\DevData" + i + ".csv");
-            //    //txtファイル削除
-            //    System.IO.File.Delete(csvpath + "\\serialData" + i + ".txt");
-            //    System.IO.File.Delete(csvpath + "\\serialData_copy" + i + ".txt");
-            //}
-            //}
+            for (int i = 1; i <= 5; i++)
+            {
+                //CSVファイル削除
+                System.IO.File.Delete(csvpath + "\\DevData" + i + ".csv");
+            }
         }
 
 
@@ -523,7 +421,7 @@ namespace sweating_ManagementSystem
             else
             {
                 //送信失敗時の処理を記述
-                MessageBox.Show("ステータスはNGです" + st);
+                //MessageBox.Show("ステータスはNGです" + st);
             }
         }
 
@@ -555,7 +453,10 @@ namespace sweating_ManagementSystem
             }
 
             //タイマー停止
-            SerialCheck_timer.Stop();
+            if (SerialCheck_timer != null)
+            {
+                SerialCheck_timer.Stop();   
+            }
 
             //データ送信スレッド中止
             if (thread != null)
@@ -577,22 +478,10 @@ namespace sweating_ManagementSystem
         {
             //二重起動防止
             if (serverUrl_input == null || serverUrl_input.IsDisposed)
-            {   
-              
+            { 
                 //null、又は、破棄されていた場合、Form1を表示
                 serverUrl_input = new ServerURL_input();
                 serverUrl_input.Show();
-            }
-        }
-
-        private void Click_Form2(object sender, EventArgs e)
-        {
-            //二重起動防止
-            if (form2 == null || form2.IsDisposed)
-            {
-                // null、又は、破棄されていた場合、Form2を表示する
-                form2 = new Form2();
-                form2.Show();
             }
         }
 
